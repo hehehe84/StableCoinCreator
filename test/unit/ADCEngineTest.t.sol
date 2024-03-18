@@ -103,7 +103,7 @@ contract ADCEngineTest is Test {
         adce.depositCollateral(weth, AMOUNT_COLLATERAL);
         vm.stopBroadcast();
 
-        vm.Log[0] memory entry = vm.getRecordedLog(0);
+        string memory entry = vm.getRecordedLog(0);
         bytes32 actual = keccak256(abi.encodePacked(entry));
         
         assertEq(expected, actual);
