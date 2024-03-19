@@ -103,11 +103,12 @@ contract ADCEngineTest is Test {
         adce.depositCollateral(weth, AMOUNT_COLLATERAL);
         vm.stopBroadcast();
 
-        string memory entry = vm.getRecordedLog(0);
+        string memory entry = vm.getRecordedLog();
         bytes32 actual = keccak256(abi.encodePacked(entry));
         
         assertEq(expected, actual);
     }
+    // https://betterprogramming.pub/a-solidity-symphony-testing-solidity-event-emissions-with-foundry-5e241415796b
 
     modifier depositedCollateral() {
         vm.startPrank(USER);
