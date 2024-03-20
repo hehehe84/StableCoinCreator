@@ -2,7 +2,8 @@
 
 pragma solidity ^0.8.20;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 import {DeployADC} from "../../script/DeployADC.s.sol";
 import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
 import {ADCEngine} from "../../src/ADCEngine.sol";
@@ -18,6 +19,13 @@ contract ADCEngineTest is Test {
     address btcUsdPriceFeed;
     address weth;
     address wbtc;
+
+
+    struct Log {
+        bytes32[] topics;
+        bytes data;
+        address emitter;
+    }
 
     address public USER = makeAddr("user");
     uint256 public constant AMOUNT_COLLATERAL = 10 ether;
@@ -90,26 +98,22 @@ contract ADCEngineTest is Test {
     event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
 
     function testCanDepositCollateralAndEmitCollateralDeposited() public 
-    {       
-        // vm.expectEmit(true, true, true, false); 
-        emit CollateralDeposited(address(USER), address(weth), AMOUNT_COLLATERAL);
-        vm.recordLogs();
+    {               
+        bytes32 expected = keccak256("CollateralDeposited(address,address,uint256)");
 
-        bytes32 expected = keccak256(abi.encodePacked("CollateralDeposited(address,address,uint256)", USER, weth, AMOUNT_COLLATERAL));
-
-        vm.startPrank(USER);       
+        vm.startPrank(USER);   
         ERC20Mock(weth).approve(address(adce), AMOUNT_COLLATERAL);
-
+        vm.recordLogs();    
         adce.depositCollateral(weth, AMOUNT_COLLATERAL);
-        vm.stopBroadcast();
-
-        string memory entry = vm.getRecordedLog();
-        bytes32 actual = keccak256(abi.encodePacked(entry));
-        
-        assertEq(expected, actual);
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        vm.stopPrank();        
+        assertEq(entries[0].topics.length, 4, "requires name function and 3 indexed parameters");
+        assertEq(entries[0].topics[0], expected, "topic 0 should be the event signature");
+        assertEq(entries[0].emitter, address(adce), "emitter should be the adce address");
+        assertEq(address(uint160(uint256(entries[0].topics[1]))), address(USER), "topic 1 should be the user address");
+        assertEq(address(uint160(uint256(entries[0].topics[2]))), address(weth), "topic 2 should be the token address");
     }
-    // https://betterprogramming.pub/a-solidity-symphony-testing-solidity-event-emissions-with-foundry-5e241415796b
-
+    
     modifier depositedCollateral() {
         vm.startPrank(USER);
         ERC20Mock(weth).approve(address(adce), AMOUNT_COLLATERAL);
